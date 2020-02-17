@@ -79,8 +79,8 @@ export const reqAddOrUpdateGroup = (dataPost) => ajax('/uac/group/save',dataPost
 export const reqUserBindRole = (dataPost) => ajax('/uac/user/bindRole',dataPost)
 
 
-//根据公司Id查询公司信息
-export const reqCompanyInfo = (companyId) => ajax('/spc/company/getSpcCompanyById/'+companyId)
+//根据登录userId查询公司信息
+export const reqCompanyInfo = (userId) => ajax('/spc/company/getSpcCompanyByUserId/'+userId)
 
 //获取地址列表
 export const reqAddressList = () => ajax('/mdc/address/get4City')

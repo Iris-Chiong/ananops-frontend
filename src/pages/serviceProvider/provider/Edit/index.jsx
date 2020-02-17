@@ -13,9 +13,9 @@ const cityData = {
 };
 
 class EditBasicInfo extends Component{
-  constructor(props){
-    super(props);
-  }
+    constructor(props){
+      super(props);
+    }
 
     state = {
       cities: cityData[provinceData[0]],
@@ -49,21 +49,52 @@ class EditBasicInfo extends Component{
       console.log(`checked = ${e.target.checked}`);
     }
   
+    getAttachments(fileList) {
+      var res = [];
+      var size = fileList.length;
+      for (var i=0; i<size; i++) {
+        var attachmentId = fileList[i].response[0].attachmentId;
+        res.push(attachmentId);
+      }
+      return res.toString();
+    }
+
     handleSubmit = async e => {
+      const companyId = this.providerInfo.id
+      if (companyId == null || companyId == undefined) {
+        message.error('公司Id为空，不能编辑');
+      }
       e.preventDefault();
-      const value = this.props.form.getFieldsValue()
-      value.expirationDate = value.expirationDate.format("YYYY-MM-DD HH:mm:ss")
-      console.log(value)
-      // this.props.form.validateFields((err, values) => {
-      //   if (!err) {
-      //     console.log('Received values of form: ', values);
-      //   }
-      // });
+      this.props.form.validateFields((err, values) => {
+        if (!err) {
+          message.error('请正确填写加*项');
+        }
+      });
+      const value = this.props.form.getFieldsValue();
+      console.log(value);
+      if (value.expirationDate != undefined) {
+        value.expirationDate = value.expirationDate.format("YYYY-MM-DD HH:mm:ss");
+      }
+      if (value.legalPersonidPhoto != undefined) {
+        var fileList = value.legalPersonidPhoto.fileList;
+        value.legalPersonidPhoto = this.getAttachments(fileList);
+      }
+      if (value.accountOpeningLicense != undefined) {
+        var fileList = value.accountOpeningLicense.fileList;
+        value.accountOpeningLicense = this.getAttachments(fileList);
+      }
+      if (value.businessLicensePhoto != undefined) {
+        var fileList = value.businessLicensePhoto.fileList;
+        value.businessLicensePhoto = this.getAttachments(fileList);
+      }
+      value.id = companyId;
       const result = await reqEditProvider(value)
       if(result.code===200){
         message.success("修改成功")
         this.props.form.resetFields()
         this.props.history.goBack()
+      } else {
+        message.success("错误消息：" + result.message)
       }
     }
   
@@ -110,46 +141,7 @@ class EditBasicInfo extends Component{
 
       const props = {
         name: 'file',
-        action: 'http://www.ananops.com:29995/opc/file/uploadFile',
-        headers: {
-          authorization: 'Bearer '+window.localStorage.getItem('token'),
-          'deviceId': deviceId,
-        },
-        data: this.getOptUploadFileReqDto,
-        onChange(info) {
-          if (info.file.status !== 'uploading') {
-            console.log(info.file, info.fileList);
-          }
-          if (info.file.status === 'done') {
-            message.success(`${info.file.name} file uploaded successfully`);
-          } else if (info.file.status === 'error') {
-            message.error(`${info.file.name} file upload failed.`);
-          }
-        },
-      };
-
-      const props1 = {
-        name: 'file',
         action: 'http://www.ananops.com:29995/spc/company/uploadCompanyPicture',
-        transformFile(file) {
-          return new Promise(resolve => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => {
-              const canvas = document.createElement('canvas');
-              const img = document.createElement('img');
-              img.src = reader.result;
-              img.onload = () => {
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                ctx.fillStyle = 'red';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(loginName, 20, 20);
-                canvas.toBlob(resolve);
-              };
-            };
-          });
-        },
         headers: {
           authorization: 'Bearer '+window.localStorage.getItem('token'),
           'deviceId': deviceId,
@@ -181,7 +173,7 @@ class EditBasicInfo extends Component{
                   hasFeedback
                 >
                   {getFieldDecorator('groupName', {
-                    initialValue:providerInfo.groupName || '',
+                    initialValue:providerInfo.groupName,
                     rules: [{ required: true, message: '请输入公司名称!' }]
                   })(
                     <Input placeholder="请输入公司名称" />
@@ -237,6 +229,7 @@ class EditBasicInfo extends Component{
                   hasFeedback
                 >
                   {getFieldDecorator('legalPersonName', {
+                    initialValue:providerInfo.legalPersonName,
                     rules: [{ required: true, message: '请输入法定代表人姓名!' }]
                   })(
                     <Input placeholder="请输入法定代表人姓名" />
@@ -250,7 +243,7 @@ class EditBasicInfo extends Component{
                   hasFeedback
                 >
                   {getFieldDecorator('legalPersonPhone',{
-                    initialValue:''
+                    initialValue:providerInfo.legalPersonPhone,
                   })(
                     <Input placeholder="法定代表人联系电话" />
                   )}
@@ -264,7 +257,9 @@ class EditBasicInfo extends Component{
                   label="法人代表证件号"
                   hasFeedback
                 >
-                  {getFieldDecorator('legalPersonNumber')(
+                  {getFieldDecorator('legalPersonNumber', {
+                    initialValue:providerInfo.legalPersonNumber,
+                  })(
                     <div>
                       <Select initialValue="0" style={{ width: 100 }}>
                         <Option value="0">身份证</Option>
@@ -281,8 +276,8 @@ class EditBasicInfo extends Component{
                   label="附件上传"
                   hasFeedback
                 >
-                  {getFieldDecorator('legalCertification')(
-                    <Upload {...props1}>
+                  {getFieldDecorator('legalPersonidPhoto')(
+                    <Upload {...props}>
                       <Button>
                         <Icon type="upload"/> 附件上传
                       </Button>
@@ -328,7 +323,9 @@ class EditBasicInfo extends Component{
                   label="邮政编码"
                   hasFeedback
                 >
-                  {getFieldDecorator('zipCode',{initialValue:''})(
+                  {getFieldDecorator('zipCode',{
+                    initialValue:providerInfo.zipCode,
+                  })(
                     <Input placeholder="请填入邮政编码" />
                   )}
                 </FormItem>
@@ -341,7 +338,9 @@ class EditBasicInfo extends Component{
                   label="详细地址"
                   hasFeedback
                 >
-                  {getFieldDecorator('detailAddress',{initialValue:''})(
+                  {getFieldDecorator('detailAddress',{
+                    initialValue:providerInfo.detailAddress,
+                  })(
                     <Input placeholder="请填入主体详细地址" />
                   )}
                 </FormItem>
@@ -358,6 +357,7 @@ class EditBasicInfo extends Component{
                   hasFeedback
                 >
                   {getFieldDecorator('contact', {
+                    initialValue:providerInfo.contact,
                     rules: [{ required: true, message: '请输入联系人!' }]
                   })(
                     <Input placeholder="请输入联系人姓名" />
@@ -371,6 +371,7 @@ class EditBasicInfo extends Component{
                   hasFeedback
                 >
                   {getFieldDecorator('contactPhone',{
+                    initialValue:providerInfo.contactPhone,
                     rules:[
                       {required: true,message:'请填入联系人手机号'},
                       {validator: this.onPhoneRq}
@@ -390,6 +391,7 @@ class EditBasicInfo extends Component{
                   hasFeedback
                 >
                   {getFieldDecorator('accountNumber',{
+                    initialValue:providerInfo.accountNumber,
                     rules:[
                       {required:true,message:'必填项不能为空'}
                     ]
@@ -404,12 +406,12 @@ class EditBasicInfo extends Component{
                   label="附件上传"
                   hasFeedback
                 >
-                  {getFieldDecorator('bankCertification', {
+                  {getFieldDecorator('accountOpeningLicense', {
                     rules: [
-                      {/* {required: true, message: '请上传基本户开户行许可证影印件!' } */}
+                      {required: true, message: '请上传基本户开户行许可证影印件!' }
                     ]
                   })(
-                    <Upload {...props1}>
+                    <Upload {...props}>
                       <Button>
                         <Icon type="upload"/> 附件上传
                       </Button>
@@ -428,6 +430,7 @@ class EditBasicInfo extends Component{
                   hasFeedback
                 >
                   {getFieldDecorator('licenseType',{
+                    initialValue:providerInfo.licenseType,
                     rules:[
                       {required:true,message:'根据类型填写，如-有限责任公司'}
                     ]
@@ -462,7 +465,7 @@ class EditBasicInfo extends Component{
                   label="统一社会信用代码"
                 >
                   {getFieldDecorator('groupCode',{
-                    initialValue:providerInfo.groupCode || '',
+                    initialValue:providerInfo.groupCode,
                     rules: [
                       {required: true, message: '请输入主体统一社会信用代码!' },
                       {validator: this.onUsccRq}
@@ -498,9 +501,9 @@ class EditBasicInfo extends Component{
                   label="附件上传"
                   hasFeedback
                 >
-                  {getFieldDecorator('buLicensePhoto',{
+                  {getFieldDecorator('businessLicensePhoto',{
                     rules: [
-                      {/* {required: true, message: '请上传营业执照影印件!' } */}
+                      {required: true, message: '请上传营业执照影印件!' }
                     ]
                   })(
                     <Upload {...props}>
@@ -522,7 +525,9 @@ class EditBasicInfo extends Component{
                   label="经营范围"
                   hasFeedback
                 >
-                  {getFieldDecorator('businessScope',{initialValue:''})(
+                  {getFieldDecorator('businessScope',{
+                    initialValue:providerInfo.businessScope,
+                  })(
                     <TextArea placeholder="请填入公司经营范围" />
                   )}
                 </FormItem>
@@ -533,7 +538,9 @@ class EditBasicInfo extends Component{
                   label="供应产品类别"
                   hasFeedback
                 >
-                  {getFieldDecorator('productCategory',{initialValue:''})(
+                  {getFieldDecorator('productCategory',{
+                    initialValue:providerInfo.productCategory,
+                  })(
                     <TextArea placeholder="请填入公司供应产品类别" />
                   )}
                 </FormItem>        

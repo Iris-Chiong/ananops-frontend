@@ -162,8 +162,11 @@ class Login extends React.Component {
           }
           
         }
+      } else {
+        message.success("账号、密码错误或者图片验证码超时，请点击验证码刷新尝试！");
       }
     }).catch((err) => {
+      message.success("账号、密码错误或者图片验证码超时，请点击验证码刷新尝试！");
       console.log(err);
       // message.info('验证码错误')
     });
